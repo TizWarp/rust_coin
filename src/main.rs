@@ -22,8 +22,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
         let kad_id = PeerId::from(key.public());
 
         let kademlia = kad::Behaviour::new(kad_id, kad::store::MemoryStore::new(kad_id));
-
-
         
         let gossipsub = gossipsub::Behaviour::new(
             libp2p_gossipsub::MessageAuthenticity::Signed(key.clone()), Config::default())?;
