@@ -1,0 +1,14 @@
+[package]
+name = "rust_coin"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+crypto = "0.5.1"
+futures = "0.3.31"
+libp2p = { version = "0.56.0", features = ["gossipsub", "kad", "macros", "mdns", "noise", "ping", "quic", "rendezvous", "tcp", "tokio", "yamux"] }
+libp2p-gossipsub = "0.49.0"
+mdns = "3.0.0"
+serde = {version = "1.0.219", features = ["derive"]}
+tokio = { version = "1.47.1", features = ["io-std", "io-util", "macros", "rt-multi-thread", "tracing"] }
+tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
