@@ -2,7 +2,7 @@ use futures::StreamExt;
 use libp2p::*;
 use libp2p::swarm::*;
 use libp2p_gossipsub::{Config, IdentTopic};
-use std::{env::args, error::Error, str::FromStr};
+use std::{env::args, error::Error, hash::{DefaultHasher, Hash, Hasher}, str::FromStr};
 // 1. Define custom network behavior
 #[derive(NetworkBehaviour)]
 struct MyBehaviour {
@@ -13,8 +13,9 @@ struct MyBehaviour {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
 
-
     let mut is_bootstrap_node = false;
+
+    let (task_tx, mut task_rx) = tokio::sync::mpsc::channel::<Task>(100);
 
     let mut swarm = SwarmBuilder::with_new_identity()
     .with_tokio()
@@ -54,7 +55,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     // 8. Event loop
     loop {
-        match swarm.select_next_some().await {
+
+        tokio::select! {
+
+        
+        swarm_event = swarm.select_next_some() => match swarm_event {
 
             SwarmEvent::ConnectionEstablished { peer_id, ..} => {
                 println!("Connected to peer {}", peer_id);
@@ -82,7 +87,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 _ => ()
             }
 
-
             SwarmEvent::Behaviour(MyBehaviourEvent::Gossipsub(event)) => match event {
                 
                 _ => ()
@@ -90,6 +94,22 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
 
             _ => ()
+        },
+
+    Some(task) = task_rx.recv() => {
+        match task {
+            Task::MinedBlock => {
+                println!("Block mined");
+            }
         }
     }
+
+    }
+    }
+}
+
+
+
+enum Task{
+    MinedBlock,
 }
