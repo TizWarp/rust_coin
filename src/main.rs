@@ -19,7 +19,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
 
     tokio::spawn(async move {
-        let mut diff : u32 = 1;
+        let mut diff : u32 = 8;
         let mut nonce : u64 = 0;
         loop {
             let mut hasher = DefaultHasher::new();
@@ -71,6 +71,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     println!("Node started. Searching for peers via DHT...");
 
+
+
     // 8. Event loop
     loop {
 
@@ -106,6 +108,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
             }
 
             SwarmEvent::Behaviour(MyBehaviourEvent::Gossipsub(event)) => match event {
+            
+            
+                gossipsub::Event::Message {message,..} => {
+                    println!("Recieved message {}", String::from_utf8(message.data).unwrap());
+                }
                 
                 _ => ()
             }
@@ -119,7 +126,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
             Task::MinedBlock => {
                 match swarm.behaviour_mut().gossipsub.publish(topic.clone(), b"Mined Block".to_vec()) {
                     Ok(_) => (),
-                    Err(error) => println!("Failed to send message {}", error),
+                    Err(_) => ()//println!("Failed to send message {}", error),
                 }
             }
         }
