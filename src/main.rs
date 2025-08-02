@@ -2,7 +2,7 @@ use futures::StreamExt;
 use libp2p::*;
 use libp2p::swarm::*;
 use libp2p_gossipsub::{Config, IdentTopic};
-use std::error::Error;
+use std::{env::args, error::Error, str::FromStr};
 // 1. Define custom network behavior
 #[derive(NetworkBehaviour)]
 struct MyBehaviour {
@@ -12,6 +12,9 @@ struct MyBehaviour {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
+
+
+    let mut is_bootstrap_node = false;
 
     let mut swarm = SwarmBuilder::with_new_identity()
     .with_tokio()
@@ -36,10 +39,18 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     swarm.behaviour_mut().gossipsub.subscribe(&topic)?;
 
-    // 6. Listen on all interfaces
-    swarm.listen_on("/ip4/0.0.0.0/tcp/0".parse()?)?;
+    if let Some(addr) = args().nth(1) {
+        swarm.listen_on("/ip4/0.0.0.0/tcp/0".parse()?)?;
+        
+        let remote: Multiaddr = addr.parse()?;
+        swarm.dial(remote)?;
+        println!("Dialed to: {addr}");
+    } else {
+        swarm.listen_on("/ip4/0.0.0.0/tcp/8000".parse()?)?;
+        is_bootstrap_node = true;
+    }
 
-
+    swarm.behaviour_mut().kademlia.bootstrap()?;
 
     println!("Node started. Searching for peers via DHT...");
 
@@ -47,16 +58,36 @@ async fn main() -> Result<(), Box<dyn Error>> {
     loop {
         match swarm.select_next_some().await {
 
-
-            SwarmEvent::NewListenAddr { listener_id, address } => {
-                println!("{}/p2p/{}",address, swarm.local_peer_id());
+            SwarmEvent::ConnectionEstablished { peer_id, ..} => {
+                println!("Connected to peer {}", peer_id);
             }
 
-            SwarmEvent::Behaviour(MyBehaviourEvent::Kademlia(kad::Event::RoutingUpdated { peer, is_new_peer, ..})) => {
-                if is_new_peer{
-                    println!("added peer: {:?}", peer);
-                    swarm.behaviour_mut().gossipsub.publish(topic.clone(), b"There is a new peer".to_vec())?;
+            SwarmEvent::ConnectionClosed { peer_id,..} => {
+                println!("Connection to peer {} closed", peer_id);
+            }
+
+            SwarmEvent::OutgoingConnectionError { peer_id, error , ..} => {
+                println!("Failed to connected to peer {}: {}", peer_id.unwrap_or(PeerId::random()), error)
+            }
+
+            SwarmEvent::NewListenAddr {address,..} => {
+                if is_bootstrap_node{
+                    println!("Full connection string for bootstraping {}/p2p/{}",address, swarm.local_peer_id());
                 }
+            }
+
+            SwarmEvent::Behaviour(MyBehaviourEvent::Kademlia(event)) => match event {
+                kad::Event::RoutingUpdated { peer,.. } => {
+                    println!("Peer {} added to routing table", peer);
+                }
+
+                _ => ()
+            }
+
+
+            SwarmEvent::Behaviour(MyBehaviourEvent::Gossipsub(event)) => match event {
+                
+                _ => ()
             }
 
 
