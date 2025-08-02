@@ -50,8 +50,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
         is_bootstrap_node = true;
     }
 
-    swarm.behaviour_mut().kademlia.bootstrap()?;
-
     println!("Node started. Searching for peers via DHT...");
 
     // 8. Event loop
