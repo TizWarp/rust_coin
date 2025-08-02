@@ -30,12 +30,15 @@ async fn main() -> Result<(), Box<dyn Error>> {
     })?
     .build();
 
+    println!("{:?}", swarm.local_peer_id());
+
     let topic = IdentTopic::new("TEST");
 
     swarm.behaviour_mut().gossipsub.subscribe(&topic)?;
 
     // 6. Listen on all interfaces
     swarm.listen_on("/ip4/0.0.0.0/tcp/0".parse()?)?;
+
 
 
     println!("Node started. Searching for peers via DHT...");
