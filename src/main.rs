@@ -46,7 +46,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         swarm.dial(remote)?;
         println!("Dialed to: {addr}");
     } else {
-        swarm.listen_on("/ip4/0.0.0.0/tcp/8000".parse()?)?;
+        swarm.listen_on("/ip4/0.0.0.0/tcp/0".parse()?)?;
         is_bootstrap_node = true;
     }
 
