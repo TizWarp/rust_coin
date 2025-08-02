@@ -2,7 +2,7 @@ use futures::StreamExt;
 use libp2p::*;
 use libp2p::swarm::*;
 use libp2p_gossipsub::{Config, IdentTopic};
-use std::{env::args, error::Error, hash::{DefaultHasher, Hash, Hasher}, str::FromStr};
+use std::{env::args, error::Error, hash::{DefaultHasher, Hash, Hasher}, io::Read, str::FromStr};
 // 1. Define custom network behavior
 #[derive(NetworkBehaviour)]
 struct MyBehaviour {
@@ -16,6 +16,24 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let mut is_bootstrap_node = false;
 
     let (task_tx, mut task_rx) = tokio::sync::mpsc::channel::<Task>(100);
+
+
+    tokio::spawn(async move {
+        let mut diff : u32 = 1;
+        let mut nonce : u64 = 0;
+        loop {
+            let mut hasher = DefaultHasher::new();
+            hasher.write_u64(nonce);
+            if hasher.finish().leading_zeros() == diff{
+                task_tx.send(Task::MinedBlock).await.unwrap();
+                nonce = 0;
+                diff += 1;
+            } else {
+                nonce += 1;
+            }
+
+        }
+    });
 
     let mut swarm = SwarmBuilder::with_new_identity()
     .with_tokio()
@@ -36,7 +54,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     println!("{:?}", swarm.local_peer_id());
 
-    let topic = IdentTopic::new("TEST");
+    let topic = IdentTopic::new("MinedBlocks");
 
     swarm.behaviour_mut().gossipsub.subscribe(&topic)?;
 
@@ -99,7 +117,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
     Some(task) = task_rx.recv() => {
         match task {
             Task::MinedBlock => {
-                println!("Block mined");
+                match swarm.behaviour_mut().gossipsub.publish(topic.clone(), b"Mined Block".to_vec()) {
+                    Ok(_) => (),
+                    Err(error) => println!("Failed to send message {}", error),
+                }
             }
         }
     }
