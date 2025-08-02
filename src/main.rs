@@ -48,6 +48,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
         match swarm.select_next_some().await {
 
 
+            SwarmEvent::NewListenAddr { listener_id, address } => {
+                println!("{}/p2p/{}",address, swarm.local_peer_id());
+            }
+
             SwarmEvent::Behaviour(MyBehaviourEvent::Kademlia(kad::Event::RoutingUpdated { peer, is_new_peer, ..})) => {
                 if is_new_peer{
                     println!("added peer: {:?}", peer);
